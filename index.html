@@ -458,11 +458,10 @@
           picture_url: item.imgurl || ''
         }));
 
-        const response = await fetch('https://coliseum-shop-backend.vercel.app/api/create_preference', {
+        const response = await fetch('https://coliseumshop.vercel.app/api/create_preference', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer sua_chave_secreta_aqui' // Substitua pela sua chave
           },
           body: JSON.stringify({
             items: items,
