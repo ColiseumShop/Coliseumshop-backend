@@ -1,5 +1,6 @@
-﻿require('dotenv').config();
-const { MercadoPagoConfig, Preference } = require('mercadopago');
+﻿import dotenv from 'dotenv';
+dotenv.config();
+import { MercadoPagoConfig, Preference } from 'mercadopago';
 
 const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
@@ -8,7 +9,8 @@ const client = new MercadoPagoConfig({
 
 const preference = new Preference(client);
 
-module.exports = async (req, res, next) => {
+// Altera de module.exports para export default para ser compatível com ES Modules
+export default async (req, res, next) => {
   try {
     const { items, payer } = req.body;
 
@@ -30,21 +32,21 @@ module.exports = async (req, res, next) => {
         failure: "https://coliseum-shop.netlify.app/?payment=failure",
         pending: "https://coliseum-shop.netlify.app/?payment=pending"
       },
-      auto_return: "approved"
-      // Se quiser webhook, ative essa linha:
-      // notification_url: process.env.NOTIFICATION_URL
+      auto_return: "approved",
+      // Se quiser webhook, ative essa linha (já está ativada no seu código original, apenas mantive):
+      notification_url: process.env.NOTIFICATION_URL
     };
 
     const response = await preference.create({ body: preferenceData });
-    
+
     res.status(200).json({
       id: response.id,
-      init_point: response.init_point,
-      sandbox_init_point: response.sandbox_init_point
+      init_point: response.init_point
     });
 
   } catch (error) {
-    console.error('Erro detalhado:', error);
-    next(error);
+    console.error('Erro ao criar preferência:', error);
+    // Adicione um detalhe do erro na resposta para facilitar o debug se ocorrer novamente
+    res.status(500).json({ error: 'Erro ao criar preferência de pagamento', details: error.message });
   }
 };

@@ -1,15 +1,18 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const createPreference = require('./api/create_preference');
+import dotenv from 'dotenv';
+dotenv.config();
+import express from 'express';
+import cors from 'cors';
+// O módulo 'path' não está sendo usado, então podemos removê-lo para limpar o código.
+// import path from 'path'; 
+import createPreference from './api/create_preference.js'; // Importa com a extensão .js para ESM
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+// A porta (PORT) é gerenciada automaticamente pelo Vercel, então removemos o app.listen.
+// const PORT = process.env.PORT || 3000;
 
 // Configurações de segurança
 app.use(cors({
-  origin: ['https://coliseum-shop.netlify.app', 'http://localhost:3000'],
+  origin: ['https://coliseum-shop.netlify.app', 'http://localhost:3000'], // Mantenha ou ajuste se seu frontend estiver em outro domínio
   methods: ['GET', 'POST']
 }));
 
@@ -30,17 +33,11 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Erro interno' });
 });
 
-// Inicialização
-const server = app.listen(PORT, () => {
-  console.log(`🟢 Servidor rodando na porta ${PORT}`);
-});
+// Remova a parte de inicialização do servidor com app.listen(), pois o Vercel faz isso.
+// const server = app.listen(PORT, () => {
+//   console.log(`🟢 Servidor rodando na porta ${PORT}`);
+// });
+// server.on('error', (error) => { ... });
 
-// Tratamento de erros de inicialização
-server.on('error', (error) => {
-  if (error.code === 'EADDRINUSE') {
-    console.error(`Porta ${PORT} já em uso`);
-  } else {
-    console.error('Erro ao iniciar servidor:', error);
-  }
-  process.exit(1);
-});
+// Exporta o aplicativo Express para uso pelo Vercel
+export default app;
