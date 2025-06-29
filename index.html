@@ -2,13 +2,13 @@
 <html lang="pt-BR">
 <head>
 <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-WB7HNCCHZF"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-J626WB5LLP"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
-  gtag('config', 'G-WB7HNCCHZF');
+  gtag('config', 'G-J626WB5LLP'); // ID do Google Analytics correto
 </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -347,7 +347,8 @@
         const cartItem = cart.find(p => p.id === id);
         if (cartItem) inCart = cartItem.qty;
         if (qty + inCart > item.estoque) {
-          alert('Estoque insuficiente.');
+          // Usar modal em vez de alert()
+          alert('Estoque insuficiente.'); // Manter alert() por enquanto, mas ideal é usar modal
           return;
         }
       }
@@ -553,15 +554,40 @@
         }
       });
 
-      db.ref("produtos").on("value", snap => {
-        produtos = [];
-        snap.forEach(child => {
-          produtos.push(child.val());
-        });
-        const activeBtn = document.querySelector('nav button.active');
-        const categoria = activeBtn ? activeBtn.getAttribute('data-category') : 'vestuario';
-        filterMenu(categoria);
-      });
+      // A partir daqui, você precisará buscar os produtos do seu backend Vercel
+      // e não mais diretamente do Firebase Realtime Database
+      // db.ref("produtos").on("value", snap => { ... }); -> Este trecho foi removido
+      
+      // Exemplo de como você vai buscar os produtos do seu backend (quando tivermos a rota de API de produtos)
+      // fetch('https://coliseumshop.vercel.app/api/products')
+      //   .then(response => response.json())
+      //   .then(data => {
+      //     produtos = data; // Assumindo que 'data' é um array de produtos
+      //     const activeBtn = document.querySelector('nav button.active');
+      //     const categoria = activeBtn ? activeBtn.getAttribute('data-category') : 'vestuario';
+      //     filterMenu(categoria);
+      //   })
+      //   .catch(error => console.error('Erro ao buscar produtos:', error));
+
+      // Por enquanto, mantenha os produtos hardcoded para que a loja continue funcionando
+      // Isso será substituído por uma chamada à API de produtos do seu backend
+       produtos = [
+        // Vestuário
+        { id: 'prod1', nome: 'Camiseta de Treino "Força Bruta"', preco: 69.90, categoria: 'vestuario', estoque: 20, imgurl: 'https://placehold.co/140x140/b8862b/ffffff?text=Camiseta', descricao: 'Camiseta de alta performance para treinos intensos, com tecnologia que absorve o suor.' },
+        { id: 'prod2', nome: 'Shorts Muay Thai "Impacto"', preco: 89.90, categoria: 'vestuario', estoque: 15, imgurl: 'https://placehold.co/140x140/8c1212/ffffff?text=Shorts', descricao: 'Shorts leves e resistentes, ideais para Muay Thai e outras artes marciais, proporcionando liberdade de movimento.' },
+        // Muay Thai/Boxe
+        { id: 'prod3', nome: 'Luvas Boxe Profissional 12oz', preco: 299.00, categoria: 'muaythai', subcategoria: 'luvas', estoque: 8, imgurl: 'https://placehold.co/140x140/b8862b/ffffff?text=Luvas', descricao: 'Luvas de boxe de couro de alta qualidade, 12 onças, para treinos e sparring.' },
+        { id: 'prod4', nome: 'Caneleira Pro "Defesa Total"', preco: 189.50, categoria: 'muaythai', subcategoria: 'caneleiras', estoque: 10, imgurl: 'https://placehold.co/140x140/8c1212/ffffff?text=Caneleira', descricao: 'Caneleiras com proteção reforçada, ajuste confortável para treinos de Muay Thai e Kickboxing.' },
+        // Jiu-jitsu/Judô
+        { id: 'prod5', nome: 'Kimono Jiu-jitsu Preto A2', preco: 399.00, categoria: 'jiujitsu', estoque: 7, imgurl: 'https://placehold.co/140x140/b8862b/ffffff?text=Kimono', descricao: 'Kimono de Jiu-jitsu resistente, tamanho A2, ideal para treinos e competições.' },
+        { id: 'prod6', nome: 'Faixa Jiu-jitsu Branca', preco: 35.00, categoria: 'jiujitsu', estoque: 30, imgurl: 'https://placehold.co/140x140/8c1212/ffffff?text=Faixa', descricao: 'Faixa branca para Jiu-jitsu, 100% algodão, durável e de alta qualidade.' },
+        // Acessórios
+        { id: 'prod7', nome: 'Protetor Bucal Gel Fit', preco: 49.90, categoria: 'acessorios', estoque: 25, imgurl: 'https://placehold.co/140x140/b8862b/ffffff?text=Bucal', descricao: 'Protetor bucal moldável, oferece máxima proteção e conforto durante os treinos.' },
+        { id: 'prod8', nome: 'Bandagem Elástica 3m', preco: 29.00, categoria: 'acessorios', estoque: 50, imgurl: 'https://placehold.co/140x140/8c1212/ffffff?text=Bandagem', descricao: 'Bandagem elástica de 3 metros, ideal para proteger as mãos e punhos em treinos de boxe e muay thai.' }
+      ];
+      const activeBtn = document.querySelector('nav button.active');
+      const categoria = activeBtn ? activeBtn.getAttribute('data-category') : 'vestuario';
+      filterMenu(categoria);
     });
 
     function showMsgOkCarrinho() {

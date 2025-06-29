@@ -30,8 +30,8 @@ const client = new MercadoPagoConfig({
 
 const preference = new Preference(client);
 
-// Altera de module.exports para export default para ser compatível com ES Modules
-export default async (req, res) => { // Removi 'next' já que não está sendo usado
+// Altera para export default e remove 'next' se não estiver sendo usado
+export default async (req, res) => {
   try {
     const { items, payer } = req.body;
 
@@ -54,19 +54,18 @@ export default async (req, res) => { // Removi 'next' já que não está sendo u
         pending: "https://coliseum-shop.netlify.app/?payment=pending"
       },
       auto_return: "approved",
-      notification_url: process.env.NOTIFICATION_URL
+      notification_url: process.env.NOTIFICATION_URL // Mantenha a notificação URL ativa se necessário
     };
 
     const response = await preference.create({ body: preferenceData });
 
-    // Exemplo de como você poderia salvar um pedido no Firestore após criar a preferência
-    // Este é um exemplo, você pode adaptar onde e como salvar o pedido.
+    // Salva o pedido no Firestore após criar a preferência
     try {
         const orderData = {
             preferenceId: response.id,
             items: validItems,
             payerEmail: payer ? payer.email : 'email_nao_fornecido',
-            status: 'pending', // Status inicial do pedido
+            status: 'pending', // Status inicial do pedido (pode ser atualizado por webhook depois)
             createdAt: admin.firestore.FieldValue.serverTimestamp() // Data e hora do servidor
         };
         await db.collection('orders').add(orderData);
@@ -83,6 +82,7 @@ export default async (req, res) => { // Removi 'next' já que não está sendo u
 
   } catch (error) {
     console.error('Erro ao criar preferência:', error);
+    // Adiciona detalhes do erro na resposta para facilitar o debug
     res.status(500).json({ error: 'Erro ao criar preferência de pagamento', details: error.message });
   }
 };
