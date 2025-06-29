@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Coliseum Shop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body { background: #fff; color: #222; font-family: 'Montserrat', Arial, sans-serif; margin: 0; }
+    header { background: #fff; padding: 26px 10px 14px 10px; text-align: center; border-bottom: 2px solid #b8862b; }
+    h1 { color: #8c1212; font-size: 2.2em; margin-bottom: 5px; }
+    main { max-width: 620px; margin: 38px auto 30px auto; background: #fff9ec; border-radius: 18px; padding: 32px 22px 24px 22px; box-shadow: 0 4px 24px #b8862b12; }
+    label { display: block; margin: 14px 0 6px 0; font-weight: bold; }
+    input, select, textarea { width: 100%; padding: 11px; border-radius: 7px; border: 1.5px solid #b8862b; margin-bottom: 8px; font-size: 1em; background: #fff;}
+    button, .del-btn, .edit-btn, .logout-btn { background: #b8862b; color: #fff; border: none; border-radius: 8px; padding: 13px 0; font-size: 1.13em; font-weight: bold; cursor: pointer; width: 100%; margin-top: 7px; transition: 0.18s; }
+    button:hover, .del-btn:hover, .edit-btn:hover, .logout-btn:hover { background: #8c1212; }
+    .logout-btn { margin-top: 0; background: #8c1212;}
+    .prod-list { margin-top: 32px; }
+    .prod-item { border-bottom: 1.5px solid #eee; padding: 15px 0; display: flex; align-items: center; gap: 18px; }
+    .prod-item img { width: 65px; height: 65px; border-radius: 8px; object-fit: cover; border: 2px solid #b8862b; }
+    .prod-info { flex: 1; }
+    .prod-nome { font-weight: bold; color: #8c1212; font-size:1.05em; }
+    .prod-cat { font-size: 0.97em; color: #b8862b; }
+    .prod-preco { font-size: 1em; }
+    .prod-desc { color: #666; font-size: 0.98em;}
+    .prod-estoque { color: #4CAF50; font-size: 1em; font-weight:bold; margin-top:3px;}
+    .prod-estoque.esgotado { color: #b01212; }
+    .del-btn, .edit-btn { width:auto; padding:8px 15px; margin:0 3px;}
+    .del-btn { background:#8c1212;}
+    .edit-btn { background:#b8862b;}
+    .edit-btn:hover {background:#5e4007;}
+    .del-btn:hover {background:#b8862b;}
+    .form-actions { display:flex; gap:12px; }
+    .form-actions button {width:100%;}
+    #notify {
+      position:fixed; top:20px; right:20px; background:#4CAF50; color:#fff; font-weight:bold; padding:18px 32px; border-radius:14px;
+      z-index:5000; box-shadow:0 4px 24px #2225; font-size:1.07em; display:none;
+    }
+    #stats-box {background:#ffe7bb;margin:22px 0 18px 0;padding:13px 18px;border-radius:12px;font-size:1.04em;}
+    #stats-box strong {color:#8c1212;}
+    #busca-produto {margin-bottom:12px;}
+    .upload-preview {margin:7px 0 12px 0;}
+    .upload-preview img {max-width:100px;max-height:100px;border-radius:7px;}
+    .login-box { max-width: 350px; margin: 60px auto; background: #fffbe8; border-radius: 18px; padding: 32px 28px; box-shadow: 0 4px 24px #b8862b22; text-align: center;}
+    .login-box input { margin-bottom: 18px;}
+    .login-box button {margin-top:12px;}
+    @media (max-width: 700px) {
+      main { padding: 1em 2vw; }
+      .prod-item { flex-direction: column; align-items: flex-start; }
+      .prod-item img { margin-bottom: 10px; }
+      .del-btn, .edit-btn { width:100%; margin:4px 0;}
+      #notify {max-width: 90vw;right:2vw;}
+    }
+  </style>
+</head>
+<body>
+  <div id="notify"></div>
+  <div id="login-container" style="display:none;">
+    <div class="login-box">
+      <h2>Admin Coliseum Shop</h2>
+      <input type="password" id="admin-pass" placeholder="Digite a senha de admin" />
+      <button onclick="doLogin()">Entrar</button>
+      <div id="login-err" style="color:#c00;font-size:0.96em;margin-top:12px;"></div>
+    </div>
+  </div>
+  <div id="admin-app" style="display:none;">
+    <header>
+      <h1>Admin Coliseum Shop</h1>
+      <button class="logout-btn" onclick="logout()" style="width:auto;float:right;margin:0;">Logout</button>
+      <div style="clear:both"></div>
+    </header>
+    <main>
+      <div id="stats-box"></div>
+      <input type="text" id="busca-produto" placeholder="Buscar produto por nome...">
+      <form id="produto-form">
+        <label for="nome">Nome do Produto</label>
+        <input type="text" id="nome" maxlength="50" required>
+        <label for="preco">Preço (ex: 99.90)</label>
+        <input type="number" id="preco" step="0.01" min="0" required>
+        <label for="categoria">Categoria</label>
+        <select id="categoria" required>
+          <option value="vestuario">Vestuário</option>
+          <option value="muaythai">Muay Thai/Boxe</option>
+          <option value="jiujitsu">Jiu-jitsu/Judô</option>
+          <option value="acessorios">Acessórios</option>
+        </select>
+        <label for="subcategoria">Subcategoria (opcional)</label>
+        <select id="subcategoria">
+          <option value="">Nenhuma</option>
+          <option value="luvas">Luvas</option>
+          <option value="caneleiras">Caneleiras</option>
+        </select>
+        <label for="imgurl">URL da Imagem (ou faça upload abaixo)</label>
+        <input type="url" id="imgurl" maxlength="255" placeholder="https://exemplo.com/imagem.jpg">
+        <div class="upload-preview" id="upload-preview"></div>
+        <input type="file" id="upload-img" accept="image/*">
+        <label for="descricao">Descrição (opcional)</label>
+        <textarea id="descricao" maxlength="120" rows="2"></textarea>
+        <label for="estoque">Estoque</label>
+        <input type="number" id="estoque" min="0" required placeholder="Quantidade disponível">
+        <input type="hidden" id="edit-id">
+        <div class="form-actions">
+          <button type="submit" id="form-btn">Cadastrar Produto</button>
+          <button type="button" onclick="limparForm()">Limpar Campos</button>
+        </div>
+      </form>
+      <div class="prod-list" id="prod-list"></div>
+    </main>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+  <script>
+    // --- LOGIN SIMPLES ---
+    const ADMIN_PASS = 'coliseumadmin2024'; // MUDE AQUI SUA SENHA ADMIN
+    function doLogin() {
+      const input = document.getElementById('admin-pass');
+      if (input.value === ADMIN_PASS) {
+        localStorage.setItem('admin_ok', '1');
+        showAdmin();
+      } else {
+        document.getElementById('login-err').innerText = 'Senha incorreta.';
+      }
+    }
+    function showAdmin() {
+      document.getElementById('login-container').style.display = 'none';
+      document.getElementById('admin-app').style.display = '';
+    }
+    function logout() {
+      localStorage.removeItem('admin_ok');
+      location.reload();
+    }
+    if(localStorage.getItem('admin_ok') === '1') {
+      showAdmin();
+    } else {
+      document.getElementById('login-container').style.display = '';
+    }
+
+    // --- FIREBASE ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyApKcOo6okadeurYY0tQzV1KTFx0WoVJLA",
+      authDomain: "gf-frango-assado.firebaseapp.com",
+      databaseURL: "https://gf-frango-assado-default-rtdb.firebaseio.com",
+      projectId: "gf-frango-assado",
+      storageBucket: "gf-frango-assado.appspot.com",
+      messagingSenderId: "651353269015",
+      appId: "1:651353269015:web:3fb1488d45daac6aa90d52"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const storage = firebase.storage();
+
+    // --- NOTIFICAÇÃO VISUAL ---
+    function notify(msg, ok=true) {
+      const box = document.getElementById('notify');
+      box.style.background = ok ? "#4CAF50" : "#b01212";
+      box.innerText = msg;
+      box.style.display = 'block';
+      setTimeout(() => { box.style.display = 'none'; }, 2600);
+    }
+
+    // --- FORMULÁRIO ---
+    function generateId() {
+      return 'p' + Math.random().toString(36).substr(2, 9);
+    }
+    function limparForm() {
+      document.getElementById('produto-form').reset();
+      document.getElementById('edit-id').value = '';
+      document.getElementById('form-btn').innerText = 'Cadastrar Produto';
+      document.getElementById('upload-preview').innerHTML = '';
+    }
+    document.getElementById('produto-form').onsubmit = async function(e) {
+      e.preventDefault();
+      const nome = document.getElementById('nome').value.trim();
+      const preco = parseFloat(document.getElementById('preco').value.replace(',', '.'));
+      const categoria = document.getElementById('categoria').value;
+      const subcategoria = document.getElementById('subcategoria').value.trim();
+      let imgurl = document.getElementById('imgurl').value.trim();
+      const descricao = document.getElementById('descricao').value.trim();
+      const estoque = parseInt(document.getElementById('estoque').value);
+      const editId = document.getElementById('edit-id').value;
+
+      if (!nome || isNaN(preco) || preco < 0 || !categoria || isNaN(estoque) || estoque < 0) {
+        notify('Preencha todos os campos obrigatórios!', false);
+        return;
+      }
+
+      // Se tem imagem upload, usa ela. Se não, pega URL digitada.
+      if(document.getElementById('upload-preview').dataset.url){
+        imgurl = document.getElementById('upload-preview').dataset.url;
+      }
+
+      const produto = { nome, preco, categoria, subcategoria, imgurl, descricao, estoque };
+      if (editId) {
+        await db.ref('produtos/' + editId).update(produto);
+        notify('Produto atualizado com sucesso!');
+        document.getElementById('form-btn').innerText = 'Cadastrar Produto';
+      } else {
+        const id = generateId();
+        await db.ref('produtos/' + id).set({ id, ...produto });
+        notify('Produto cadastrado com sucesso!');
+      }
+      limparForm();
+    };
+
+    // --- UPLOAD DE IMAGEM ---
+    document.getElementById('upload-img').addEventListener('change', function() {
+      const file = this.files[0];
+      if(!file) return;
+      const id = generateId();
+      const ref = storage.ref('produtos/'+id+'_'+file.name);
+      ref.put(file).then(snap => {
+        snap.ref.getDownloadURL().then(url => {
+          document.getElementById('upload-preview').innerHTML = `<img src="${url}">`;
+          document.getElementById('upload-preview').dataset.url = url;
+          notify('Imagem enviada com sucesso!');
+        });
+      }).catch(()=>notify('Falha ao enviar imagem!', false));
+    });
+
+    // --- BUSCA E RENDERIZAÇÃO PRODUTOS ---
+    let produtosCache = [];
+    function renderProdutos() {
+      db.ref('produtos').on('value', snap => {
+        const list = document.getElementById('prod-list');
+        list.innerHTML = '';
+        produtosCache = [];
+        let total = 0, esgotados = 0, emEstoque = 0;
+        if (!snap.exists()) {
+          list.innerHTML = '<p style="color:#aaa;">Nenhum produto cadastrado ainda.</p>';
+        } else {
+          snap.forEach(child => {
+            const p = child.val();
+            if(['vestuario','muaythai','jiujitsu','acessorios'].includes(p.categoria)){
+              produtosCache.push(p);
+              total++;
+              if(p.estoque == 0) esgotados++;
+              else emEstoque++;
+            }
+          });
+        }
+        updateStats(total, esgotados, emEstoque);
+        filterAndShow();
+      });
+    }
+    function updateStats(total, esgotados, emEstoque){
+      document.getElementById('stats-box').innerHTML = `
+        <b>Produtos:</b> <strong>${total}</strong> &nbsp;|&nbsp; 
+        <span style="color:#b01212">Esgotados:</span> <strong>${esgotados}</strong> &nbsp;|&nbsp; 
+        <span style="color:#4CAF50">Em estoque:</span> <strong>${emEstoque}</strong>
+      `;
+    }
+    document.getElementById('busca-produto').oninput = filterAndShow;
+    function filterAndShow() {
+      const busca = document.getElementById('busca-produto').value.toLowerCase().trim();
+      const list = document.getElementById('prod-list');
+      list.innerHTML = '';
+      let lista = produtosCache;
+      if(busca.length > 0){
+        lista = lista.filter(p => p.nome.toLowerCase().includes(busca));
+      }
+      if(lista.length == 0){
+        list.innerHTML = '<p style="color:#aaa;">Nenhum produto encontrado.</p>';
+      }else{
+        lista.forEach(p => {
+          const div = document.createElement('div');
+          div.className = 'prod-item';
+          div.innerHTML = `
+            <img src="${p.imgurl}" alt="">
+            <div class="prod-info">
+              <div class="prod-nome">${p.nome}</div>
+              <div class="prod-cat">${p.categoria}${p.subcategoria ? ' / '+p.subcategoria : ''}</div>
+              <div class="prod-preco">R$ ${parseFloat(p.preco).toFixed(2).replace('.', ',')}</div>
+              <div class="prod-desc">${p.descricao || ''}</div>
+              <div class="prod-estoque${p.estoque === 0 ? ' esgotado' : ''}">${p.estoque === 0 ? 'Esgotado' : 'Estoque: ' + p.estoque}</div>
+            </div>
+            <button class="edit-btn" onclick="editProduto('${p.id}')">Editar</button>
+            <button class="del-btn" onclick="delProduto('${p.id}')">Excluir</button>
+          `;
+          list.appendChild(div);
+        });
+      }
+    }
+
+    // --- EXCLUIR/EDITAR PRODUTO ---
+    window.delProduto = function(id) {
+      if (confirm('Tem certeza que deseja excluir este produto?')) {
+        db.ref('produtos/' + id).remove();
+        notify('Produto excluído!', false);
+      }
+    };
+    window.editProduto = function(id) {
+      db.ref('produtos/' + id).once('value', snap => {
+        const p = snap.val();
+        document.getElementById('nome').value = p.nome;
+        document.getElementById('preco').value = p.preco;
+        document.getElementById('categoria').value = p.categoria;
+        document.getElementById('subcategoria').value = p.subcategoria || '';
+        document.getElementById('imgurl').value = p.imgurl;
+        document.getElementById('descricao').value = p.descricao || '';
+        document.getElementById('estoque').value = p.estoque ?? 0;
+        document.getElementById('edit-id').value = p.id;
+        document.getElementById('form-btn').innerText = 'Salvar Edição';
+        document.getElementById('upload-preview').innerHTML = p.imgurl ? `<img src="${p.imgurl}">` : '';
+        document.getElementById('upload-preview').dataset.url = p.imgurl;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    };
+
+    renderProdutos();
+  </script>
+</body>
+</html>
