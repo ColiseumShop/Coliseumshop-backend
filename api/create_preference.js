@@ -31,14 +31,23 @@ export default async (req, res) => {
     return;
   }
 
+  // --- ADICIONADO PARA DEPURAR O ERRO 400 ---
+  console.log('--- Requisição Recebida em create_preference.js ---');
+  console.log('Corpo da Requisição (req.body):', JSON.stringify(req.body, null, 2));
+  // --- FIM DA ADIÇÃO PARA DEPURAR ---
+
   try {
     const { cartItems, payerEmail } = req.body;
 
     if (!cartItems || cartItems.length === 0) {
+      // Esta validação é a que está a disparar o erro "Carrinho de compras vazio"
+      // Se ainda está a acontecer, significa que cartItems está vazio ou não é um array
+      console.error('Erro: Carrinho de compras vazio ou inválido recebido.');
       return res.status(400).json({ error: 'Carrinho de compras vazio.' });
     }
 
     if (!payerEmail) {
+      console.error('Erro: Email do comprador em falta.');
       return res.status(400).json({ error: 'Email do comprador é obrigatório.' });
     }
 
@@ -47,8 +56,8 @@ export default async (req, res) => {
       items: cartItems.map(item => ({
         id: item.id,
         name: item.name,
-        price: parseFloat(item.price),
-        quantity: parseInt(item.quantity)
+        price: parseFloat(item.price), // Espera um número
+        quantity: parseInt(item.quantity) // Espera um número inteiro
       })),
       payerEmail: payerEmail,
       createdAt: admin.firestore.FieldValue.serverTimestamp(), // Adiciona um timestamp do servidor
@@ -65,7 +74,7 @@ export default async (req, res) => {
 
     const preferenceData = {
       items: cartItems.map(item => ({
-        title: item.name,
+        title: item.name, // Usa 'name' do frontend
         unit_price: parseFloat(item.price),
         quantity: parseInt(item.quantity)
       })),
@@ -97,6 +106,9 @@ export default async (req, res) => {
     if (error.code && error.details) {
       console.error(`Erro ao salvar pedido no Firestore: Error: ${error.code} ${error.details}`);
     }
-    res.status(500).json({ error: 'Erro ao processar o pagamento.', details: error.message });
+    // Retorna um 400 Bad Request se o erro for de validação dos dados de entrada
+    // Caso contrário, retorna um 500 Internal Server Error
+    const statusCode = error.message.includes('Carrinho de compras vazio') || error.message.includes('Email do comprador é obrigatório') ? 400 : 500;
+    res.status(statusCode).json({ error: 'Erro ao processar o pagamento.', details: error.message });
   }
 };

@@ -445,37 +445,30 @@
       mpButton.disabled = true;
 
       try {
-        const items = cart.map(item => ({
-          title: item.nome.substring(0, 100),
-          unit_price: parseFloat(item.preco),
+        // AQUI ESTÁ A MUDANÇA CRÍTICA
+        const itemsToSend = cart.map(item => ({
+          id: item.id, // Adiciona o ID do produto
+          name: item.nome, // Usa 'name' em vez de 'title' para o backend
+          price: parseFloat(item.preco),
           quantity: parseInt(item.qty),
-          description: item.descricao?.substring(0, 150) || '',
-          picture_url: item.imgurl || ''
+          description: item.descricao || '', // Adiciona descrição
+          imgurl: item.imgurl || '' // Adiciona URL da imagem
         }));
 
-        const response = await fetch('https://coliseumshop.vercel.app/api/create_preference', {
+        const response = await fetch('https://coliseumshop-3hxgx01ez-coliseum-shops-projects.vercel.app/api/create_preference', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            items: items,
-            payer: {
-              email: customerEmail
-            },
-            back_urls: {
-              success: window.location.href.split('?')[0] + '?payment=success',
-              failure: window.location.href.split('?')[0] + '?payment=failure',
-              pending: window.location.href.split('?')[0] + '?payment=pending'
-            },
-            auto_return: "approved"
+            cartItems: itemsToSend, // Envia como 'cartItems'
+            payerEmail: customerEmail // Envia como 'payerEmail'
           })
         });
 
         if (!response.ok) {
-          // Tentar ler a resposta de erro do backend para melhor diagnóstico
-          const errorText = await response.text();
-          throw new Error(`Erro na API (${response.status}): ${errorText}`);
+          const errorData = await response.json(); // Tentar ler o JSON de erro
+          throw new Error(`Erro na API (${response.status}): ${errorData.error || response.statusText}`);
         }
 
         const data = await response.json();
