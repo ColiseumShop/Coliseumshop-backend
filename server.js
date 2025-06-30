@@ -1,41 +1,43 @@
 // server.js
 
 import express from 'express';
-import cors from 'cors'; // Importa o pacote cors
-import dotenv from 'dotenv'; // Importa dotenv para carregar variáveis de ambiente
+import cors from 'cors';
+import dotenv from 'dotenv';
 
-dotenv.config(); // Carrega as variáveis de ambiente do arquivo .env
+dotenv.config();
 
-const app = express(); // Inicializa o aplicativo Express
+const app = express();
 
-// Configuração CORS para permitir requisições do seu frontend Netlify
+// Configuração CORS mais robusta para lidar com OPTIONS requests
 const corsOptions = {
-  // Define as origens permitidas (seu domínio Netlify e localhost para desenvolvimento)
   origin: ['https://coliseum-shop.netlify.app', 'http://localhost:3000'],
-  methods: ['GET', 'POST'], // Permite os métodos HTTP GET e POST
-  allowedHeaders: ['Content-Type'], // Permite o cabeçalho Content-Type
+  methods: ['GET', 'POST', 'OPTIONS'], // Explicitamente permite OPTIONS
+  allowedHeaders: ['Content-Type', 'Authorization'], // Adicione outros cabeçalhos se usar (ex: Authorization)
+  preflightContinue: false, // Não passa a requisição preflight para as rotas
+  optionsSuccessStatus: 204 // Retorna status 204 (No Content) para preflight bem-sucedido
 };
-app.use(cors(corsOptions)); // Aplica o middleware CORS com as opções configuradas
+app.use(cors(corsOptions));
 
-app.use(express.json()); // Habilita o Express para parsear corpos de requisição JSON
-app.use(express.urlencoded({ extended: true })); // Habilita o Express para parsear corpos de requisição URL-encoded
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Importa sua rota de criação de preferência do Mercado Pago
+// Importa sua rota de criação de preferência
 import createPreference from './api/create_preference.js';
 
-// Define a rota POST para criar preferências de pagamento
-app.post('/api/create_preference', createPreference);
+// Defina a rota para o create_preference
+// A rota agora usa app.all para responder a todos os métodos, incluindo OPTIONS
+app.all('/api/create_preference', createPreference);
 
-// Rota de saúde para verificar se o backend está online
+
+// Rota de saúde
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'online', timestamp: new Date() });
 });
 
-// Middleware de tratamento de erros global
+// Tratamento de erros
 app.use((err, req, res, next) => {
-  console.error('Erro no servidor:', err.stack); // Loga o erro completo
+  console.error('Erro no servidor:', err.stack);
   res.status(500).json({ error: 'Erro interno do servidor', details: err.message });
 });
 
-// Exporta o aplicativo Express para uso pelo Vercel como uma função serverless
 export default app;
