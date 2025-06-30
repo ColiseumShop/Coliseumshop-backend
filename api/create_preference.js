@@ -1,101 +1,102 @@
 ﻿// api/create_preference.js
-
 import dotenv from 'dotenv';
-dotenv.config(); // Carrega variáveis de ambiente
+import { MercadoPagoConfig, Preference } from 'mercadopago';
+import admin from 'firebase-admin';
 
-// Importa o Firebase Admin SDK para interagir com o Firebase a partir do backend
-import admin from 'firebase-admin'; // Usando 'import' para ser compatível com ES Modules
+// Carrega as variáveis de ambiente do arquivo .env
+dotenv.config();
 
-// É crucial parsear a variável de ambiente (que é uma string JSON) para um objeto JavaScript
-// A chave de conta de serviço é usada para autenticar o backend com o Firebase
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-
-// Inicializa o Firebase Admin SDK se ele ainda não foi inicializado
-// Esta verificação impede que o aplicativo Firebase seja inicializado múltiplas vezes
-// em ambientes serverless como o Vercel.
+// Inicializa o Firebase Admin SDK APENAS UMA VEZ
+// Verifica se já existe uma instância do app Firebase para evitar inicializações duplicadas
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount) // Autentica com a chave de serviço
-  });
+  try {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  } catch (error) {
+    console.error('Erro ao inicializar o Firebase Admin SDK:', error.message);
+    // Em produção, você pode querer lançar o erro ou lidar com ele de forma diferente
+    // Para depuração, um console.error é suficiente.
+  }
 }
 
-// Obtém uma referência ao serviço Cloud Firestore
-const db = admin.firestore(); // 'db' é a sua instância do Firestore para operações de banco de dados
+const db = admin.firestore(); // Obtém a instância do Firestore
 
-// Importa as classes do SDK do Mercado Pago
-import { MercadoPagoConfig, Preference } from 'mercadopago';
-
-// Configura o cliente do Mercado Pago com o token de acesso (do .env)
-const client = new MercadoPagoConfig({
-  accessToken: process.env.MP_ACCESS_TOKEN, // Seu token de acesso do Mercado Pago
-  options: { timeout: 5000 } // Tempo limite para requisições
-});
-
-const preference = new Preference(client); // Cria uma instância da classe Preference
-
-// Exporta a função assíncrona para ser usada como um endpoint de API pelo Express no server.js
 export default async (req, res) => {
-  try {
-    const { items, payer } = req.body; // Extrai itens e dados do pagador do corpo da requisição
+  if (req.method === 'OPTIONS') {
+    // CORS Preflight - já deve ser tratado pelo middleware cors no server.js,
+    // mas é bom ter uma redundância para esta rota específica
+    res.status(204).send('');
+    return;
+  }
 
-    // Validação básica dos itens
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'Items deve ser um array não vazio' });
+  try {
+    const { cartItems, payerEmail } = req.body;
+
+    if (!cartItems || cartItems.length === 0) {
+      return res.status(400).json({ error: 'Carrinho de compras vazio.' });
     }
 
-    // Mapeia e valida os itens para o formato exigido pelo Mercado Pago
-    const validItems = items.map(item => ({
-      title: item.title || 'Produto sem nome',
-      quantity: Number(item.quantity) || 1,
-      unit_price: parseFloat(item.unit_price) || 0,
-      currency_id: 'BRL', // Moeda em Reais Brasileiros
-      // Incluir descrição e picture_url para uma experiência de checkout mais rica
-      description: item.description?.substring(0, 150) || '',
-      picture_url: item.imgurl || ''
-    }));
+    if (!payerEmail) {
+      return res.status(400).json({ error: 'Email do comprador é obrigatório.' });
+    }
 
-    // Dados da preferência de pagamento para o Mercado Pago
-    const preferenceData = {
-      items: validItems,
-      back_urls: { // URLs para onde o usuário será redirecionado após o pagamento
-        success: "https://coliseum-shop.netlify.app/?payment=success",
-        failure: "https://coliseum-shop.netlify.app/?payment=failure",
-        pending: "https://coliseum-shop.netlify.app/?payment=pending"
-      },
-      auto_return: "approved", // Redireciona automaticamente após pagamento aprovado
-      notification_url: process.env.NOTIFICATION_URL // URL para receber notificações de status de pagamento (webhooks)
+    // 1. Salvar o pedido no Firestore PRIMEIRO para obter um ID
+    const orderData = {
+      items: cartItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: parseFloat(item.price),
+        quantity: parseInt(item.quantity)
+      })),
+      payerEmail: payerEmail,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(), // Adiciona um timestamp do servidor
+      status: 'pending', // Status inicial do pedido
     };
 
-    // Cria a preferência de pagamento no Mercado Pago
-    const response = await preference.create({ body: preferenceData });
+    const docRef = await db.collection('orders').add(orderData);
+    const orderId = docRef.id; // <<< AQUI PEGAMOS O ID GERADO PELO FIRESTORE
 
-    // --- Início da Lógica de Salvamento no Firestore ---
-    try {
-        const orderData = {
-            preferenceId: response.id, // ID da preferência gerado pelo Mercado Pago
-            items: validItems, // Itens do pedido
-            payerEmail: payer ? payer.email : 'email_nao_fornecido', // E-mail do pagador
-            status: 'pending', // Status inicial do pedido (pode ser atualizado por um webhook posteriormente)
-            createdAt: admin.firestore.FieldValue.serverTimestamp() // Timestamp do servidor para registro
-        };
-        // Adiciona um novo documento à coleção 'orders' no Firestore
-        await db.collection('orders').add(orderData);
-        console.log('Pedido salvo no Firestore com sucesso para preference ID:', response.id);
-    } catch (firestoreError) {
-        console.error('Erro ao salvar pedido no Firestore:', firestoreError);
-        // Em caso de erro ao salvar no Firestore, não impede o fluxo do Mercado Pago, apenas loga o erro.
-    }
-    // --- Fim da Lógica de Salvamento no Firestore ---
+    console.log(`Pedido salvo no Firestore com sucesso para ID: ${orderId}`);
 
-    // Retorna a ID da preferência e o URL de inicialização para o frontend
+    // Configura o cliente do Mercado Pago com seu Access Token
+    const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
+
+    const preferenceData = {
+      items: cartItems.map(item => ({
+        title: item.name,
+        unit_price: parseFloat(item.price),
+        quantity: parseInt(item.quantity)
+      })),
+      back_urls: {
+        success: process.env.FRONTEND_URL,
+        failure: process.env.FRONTEND_URL,
+        pending: process.env.FRONTEND_URL
+      },
+      notification_url: process.env.NOTIFICATION_URL,
+      // >>> ADICIONAMOS O external_reference AQUI! <<<
+      external_reference: orderId, // Usa o ID do pedido do Firestore
+      payer: {
+        email: payerEmail,
+      },
+      auto_return: 'approved', // Redireciona o usuário automaticamente após pagamento aprovado
+    };
+
+    const preference = new Preference(client);
+    const result = await preference.create({ body: preferenceData });
+
     res.status(200).json({
-      id: response.id,
-      init_point: response.init_point
+      init_point: result.init_point,
+      orderId: orderId // Também é útil retornar o orderId para o frontend
     });
 
   } catch (error) {
-    console.error('Erro ao criar preferência ou processar:', error); // Loga o erro no console do backend
-    // Retorna uma resposta de erro para o frontend
-    res.status(500).json({ error: 'Erro ao criar preferência de pagamento', details: error.message });
+    console.error('Erro ao criar preferência ou salvar pedido no Firestore:', error);
+    // Verifique se o erro é do Firestore (por exemplo, permissão negada)
+    if (error.code && error.details) {
+      console.error(`Erro ao salvar pedido no Firestore: Error: ${error.code} ${error.details}`);
+    }
+    res.status(500).json({ error: 'Erro ao processar o pagamento.', details: error.message });
   }
 };
