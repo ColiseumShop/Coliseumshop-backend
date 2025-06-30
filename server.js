@@ -8,17 +8,16 @@ dotenv.config();
 
 const app = express();
 
-// Configuração CORS para o frontend (com origens específicas)
-const corsOptionsFrontend = {
+// Configuração CORS mais robusta para lidar com OPTIONS requests
+const corsOptions = {
   origin: ['https://coliseum-shop.netlify.app', 'http://localhost:3000'],
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+  methods: ['GET', 'POST', 'OPTIONS'], // Explicitamente permite GET, POST e OPTIONS
+  allowedHeaders: ['Content-Type', 'Authorization'], // Adicione outros cabeçalhos se usar (ex: Authorization)
+  preflightContinue: false, // Não passa a requisição preflight para as rotas
+  optionsSuccessStatus: 204 // Retorna status 204 (No Content) para preflight bem-sucedido
 };
+app.use(cors(corsOptions)); // Aplica esta configuração CORS a TODAS as rotas
 
-// Aplica o CORS para o frontend em todas as rotas por padrão
-app.use(cors(corsOptionsFrontend));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -31,9 +30,10 @@ import webhookHandler from './api/webhook.js';
 
 
 // Defina a rota para o create_preference
+// O CORS já foi aplicado globalmente com app.use(cors(corsOptions));
 app.all('/api/create_preference', createPreference);
 
-// --- NOVA ROTA PARA O WEBHOOK DO MERCADO PAGO ---
+// --- ROTA PARA O WEBHOOK DO MERCADO PAGO ---
 // Para o webhook, aplicamos o middleware 'cors()' sem opções,
 // o que permite requisições de QUALQUER origem para esta rota específica.
 // Isso é necessário porque as notificações vêm dos servidores do Mercado Pago.
