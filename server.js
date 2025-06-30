@@ -8,25 +8,31 @@ dotenv.config();
 
 const app = express();
 
-// Configuração CORS mais robusta para lidar com OPTIONS requests
+// Configuração CORS robusta
 const corsOptions = {
   origin: ['https://coliseum-shop.netlify.app', 'http://localhost:3000'],
-  methods: ['GET', 'POST', 'OPTIONS'], // Explicitamente permite OPTIONS
-  allowedHeaders: ['Content-Type', 'Authorization'], // Adicione outros cabeçalhos se usar (ex: Authorization)
-  preflightContinue: false, // Não passa a requisição preflight para as rotas
-  optionsSuccessStatus: 204 // Retorna status 204 (No Content) para preflight bem-sucedido
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Importa sua rota de criação de preferência
+// Importa sua rota de criação de preferência (já existente)
 import createPreference from './api/create_preference.js';
 
+// Importa o novo handler do webhook
+import webhookHandler from './api/webhook.js';
+
+
 // Defina a rota para o create_preference
-// A rota agora usa app.all para responder a todos os métodos, incluindo OPTIONS
 app.all('/api/create_preference', createPreference);
+
+// --- NOVA ROTA PARA O WEBHOOK DO MERCADO PAGO ---
+app.post('/api/webhook', webhookHandler);
 
 
 // Rota de saúde
