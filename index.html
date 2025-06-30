@@ -211,24 +211,9 @@
     <div class="footer-row">© Coliseum Shop. Todos os direitos reservados.</div>
   </footer>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <!-- Mercado Pago SDK -->
   <script src="https://sdk.mercadopago.com/js/v2"></script>
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyApKcOo6okadeurYY0tQzV1KTFx0WoVJLA",
-      authDomain: "gf-frango-assado.firebaseapp.com",
-      databaseURL: "https://gf-frango-assado-default-rtdb.firebaseio.com",
-      projectId: "gf-frango-assado",
-      storageBucket: "gf-frango-assado.appspot.com",
-      messagingSenderId: "651353269015",
-      appId: "1:651353269015:web:3fb1488d45daac6aa90d52"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
     // Configuração do Mercado Pago
     const mp = new MercadoPago('APP_USR-2cf8bb64-1d8a-4bb2-802b-6f2ef8331d61', { 
       locale: 'pt-BR'
@@ -306,7 +291,7 @@
         const div = document.createElement('div');
         div.className = 'product-card';
         div.innerHTML = `
-          <img src="${p.imgurl||'https://via.placeholder.com/140x140?text=+'}" class="prod-img" alt="${p.nome}">
+          <img src="${p.imgurl||'https://placehold.co/140x140?text=+'}" class="prod-img" alt="${p.nome}">
           <div class="prod-nome">${p.nome}</div>
           <div class="prod-preco">R$ ${p.preco.toFixed(2).replace('.', ',')}</div>
           ${estrelas}
@@ -488,7 +473,9 @@
         });
 
         if (!response.ok) {
-          throw new Error(await response.text());
+          // Tentar ler a resposta de erro do backend para melhor diagnóstico
+          const errorText = await response.text();
+          throw new Error(`Erro na API (${response.status}): ${errorText}`);
         }
 
         const data = await response.json();
@@ -499,7 +486,7 @@
           throw new Error('Link de pagamento não gerado');
         }
       } catch (error) {
-        console.error('Erro Mercado Pago:', error);
+        console.error('Erro Mercado Pago (Frontend):', error);
         document.getElementById('cart-error').innerText = 'Erro: ' + error.message;
         mpButton.innerHTML = originalText;
         mpButton.disabled = false;
@@ -523,7 +510,7 @@
       if (!prod) return;
       document.getElementById('modal-produto-card').innerHTML = `
         <span id="modal-produto-close">&times;</span>
-        <img src="${prod.imgurl || 'https://via.placeholder.com/140x140?text=+'}" alt="${prod.nome}">
+        <img src="${prod.imgurl || 'https://placehold.co/140x140?text=+'}" alt="${prod.nome}">
         <div class="prod-nome">${prod.nome}</div>
         <div class="prod-preco">R$ ${prod.preco.toFixed(2).replace('.', ',')}</div>
         <div class="star-rating">★ ★ ★ ★ ★</div>
@@ -554,23 +541,9 @@
         }
       });
 
-      // A partir daqui, você precisará buscar os produtos do seu backend Vercel
-      // e não mais diretamente do Firebase Realtime Database
-      // db.ref("produtos").on("value", snap => { ... }); -> Este trecho foi removido
-      
-      // Exemplo de como você vai buscar os produtos do seu backend (quando tivermos a rota de API de produtos)
-      // fetch('https://coliseumshop.vercel.app/api/products')
-      //   .then(response => response.json())
-      //   .then(data => {
-      //     produtos = data; // Assumindo que 'data' é um array de produtos
-      //     const activeBtn = document.querySelector('nav button.active');
-      //     const categoria = activeBtn ? activeBtn.getAttribute('data-category') : 'vestuario';
-      //     filterMenu(categoria);
-      //   })
-      //   .catch(error => console.error('Erro ao buscar produtos:', error));
-
+      // TODO: IMPLEMENTAR A BUSCA DE PRODUTOS DO FIREBASE FIRESTORE VIA BACKEND
       // Por enquanto, mantenha os produtos hardcoded para que a loja continue funcionando
-      // Isso será substituído por uma chamada à API de produtos do seu backend
+      // Futuramente, esta seção será substituída por uma chamada à API de produtos do seu backend
        produtos = [
         // Vestuário
         { id: 'prod1', nome: 'Camiseta de Treino "Força Bruta"', preco: 69.90, categoria: 'vestuario', estoque: 20, imgurl: 'https://placehold.co/140x140/b8862b/ffffff?text=Camiseta', descricao: 'Camiseta de alta performance para treinos intensos, com tecnologia que absorve o suor.' },
