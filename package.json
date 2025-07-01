@@ -1,20 +1,21 @@
-{
-  "name": "coliseum-shop-backend",
-  "version": "1.0.0",
-  "description": "Funções Serverless para integração com Mercado Pago e Firestore",
-  "type": "module",
-  "scripts": {
-    "start": "echo 'Este projeto usa Vercel Serverless Functions, não precisa de script de start local.'",
-    "test": "echo 'Nenhum teste configurado para funções serverless simples.'",
-    "deploy": "vercel --prod"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.0.0",
-    "firebase-admin": "^11.11.1",
-    "mercadopago": "^2.8.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
-}
+    {
+      "name": "coliseum-shop-backend",
+      "version": "1.0.0",
+      "description": "Funções Serverless para integração com Mercado Pago e Firestore",
+      "type": "module",
+      "scripts": {
+        "start": "echo 'Este projeto usa Vercel Serverless Functions, não precisa de script de start local.'",
+        "test": "echo 'Nenhum teste configurado para funções serverless simples.'",
+        "deploy": "vercel --prod"
+      },
+      "dependencies": {
+        "cors": "^2.8.5",
+        "dotenv": "^16.0.0",
+        "firebase-admin": "^11.11.1",
+        "mercadopago": "^2.8.0"
+      },
+      "engines": {
+        "node": ">=18.0.0"
+      }
+    }
+    
