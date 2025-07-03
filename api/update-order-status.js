@@ -5,13 +5,33 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
-    // Não precisamos do storageBucket aqui, mas é bom manter a inicialização consistente
   });
 }
 
 const db = admin.firestore();
 
 module.exports = async (req, res) => {
+  // --- CORREÇÃO CORS ---
+  // Permite requisições de localhost para desenvolvimento
+  const allowedOrigins = [
+    'https://coliseumshop.netlify.app',
+    'http://localhost:8000' // Adicionado para desenvolvimento local do admin.html
+  ];
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', true); // Se você usar cookies ou credenciais
+
+  // Lida com requisições OPTIONS (preflight)
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send();
+  }
+  // --- FIM CORREÇÃO CORS ---
+
   // Apenas permite requisições POST
   if (req.method !== 'POST') {
     return res.status(405).send('Método não permitido. Apenas POST é suportado.');
@@ -33,42 +53,33 @@ module.exports = async (req, res) => {
 
     const orderData = orderSnap.data();
 
-    // Lógica para reduzir o estoque APENAS se o status for 'approved' ou 'completed'
-    // E se o status anterior não era 'approved' ou 'completed' (para evitar duplicação)
     if ((newStatus === 'approved' || newStatus === 'completed') &&
         !(orderData.status === 'approved' || orderData.status === 'completed')) {
       
-      const batch = db.batch(); // Usamos um batch para garantir atomicidade das operações
+      const batch = db.batch();
 
       if (orderData.items && orderData.items.length > 0) {
         for (const item of orderData.items) {
-          const productRef = db.collection('products').doc(item.productId); // Assumindo que o item tem productId
+          const productRef = db.collection('products').doc(item.productId);
           
-          // Obtém o produto para verificar o estoque atual
           const productSnap = await productRef.get();
           if (productSnap.exists) {
             const productData = productSnap.data();
             const currentStock = productData.estoque || 0;
             const quantityOrdered = item.quantity || 0;
             
-            // Calcula o novo estoque
-            const newStock = Math.max(0, currentStock - quantityOrdered); // Garante que não fica negativo
+            const newStock = Math.max(0, currentStock - quantityOrdered);
 
-            // Adiciona a operação de atualização ao batch
             batch.update(productRef, { estoque: newStock });
           } else {
             console.warn(`Produto com ID ${item.productId} não encontrado para atualização de estoque.`);
-            // Você pode decidir como lidar com isso: ignorar, retornar erro, etc.
-            // Por enquanto, vamos continuar, mas logar o aviso.
           }
         }
-        // Comita todas as operações de atualização de estoque de uma vez
         await batch.commit();
         console.log(`Estoque atualizado para o pedido ${orderId}.`);
       }
     }
 
-    // Atualiza o status do pedido no Firestore
     await orderRef.update({ status: newStatus });
 
     res.status(200).json({ message: 'Status do pedido atualizado e estoque ajustado (se aplicável).' });
